@@ -1,3 +1,5 @@
+//backend/models/society.js
+
 const mongoose = require('mongoose');
 const SocietySchema = new mongoose.Schema({
     name: String,

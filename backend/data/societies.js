@@ -1,3 +1,5 @@
+//backend/data/societies.js
+
 module.exports = [
     {
         name: "Prestige Fern Residency",

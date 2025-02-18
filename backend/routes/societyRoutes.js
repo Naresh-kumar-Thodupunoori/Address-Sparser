@@ -1,3 +1,4 @@
+//backend/routes/societyRoutes.js
 const express = require('express');
 const { getSocieties, checkServiceability } = require('../controllers/societyController');
 const router = express.Router();

@@ -19,19 +19,34 @@ const checkServiceability = async (req, res) => {
     
     try {
         const societies = await Society.find();
-        let matchedSociety = null;
         let within5km = false;
-
-        for (const society of societies) {
-            if (isWithinRadius(latitude, longitude, society.latitude, society.longitude, 5)) {
-                matchedSociety = society;
-                within5km = true;
-                break;
-            }
+        
+        // First, try to extract society name from the address
+        const addressSocietyName = address.match(/(?:Block\s+[\w]+,\s+)(.+?)(?:,|$)/i)?.[1]?.trim();
+        
+        if (!addressSocietyName) {
+            return res.json({ 
+                societyName: 'Not Serviceable', 
+                block: null, 
+                flat: null, 
+                within5km: false 
+            });
         }
 
+        // Find society by name and distance
+        const matchedSociety = societies.find(society => {
+            const isNearby = isWithinRadius(latitude, longitude, society.latitude, society.longitude, 5);
+            const societyNameRegex = new RegExp(escapeRegex(society.name), 'i');
+            return isNearby && societyNameRegex.test(addressSocietyName);
+        });
+
         if (!matchedSociety) {
-            return res.json({ societyName: 'Not Serviceable', block: null, flat: null, within5km });
+            return res.json({ 
+                societyName: 'Not Serviceable', 
+                block: null, 
+                flat: null, 
+                within5km: false 
+            });
         }
 
         let matchedBlock = null;
@@ -59,7 +74,7 @@ const checkServiceability = async (req, res) => {
             societyName: matchedSociety.name,
             block: matchedBlock ? matchedBlock.name : null,
             flat: flatNumber,
-            within5km
+            within5km: true
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

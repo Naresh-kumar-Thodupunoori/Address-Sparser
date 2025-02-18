@@ -1,3 +1,5 @@
+//backend/utils/geoUtils.js
+
 const helper = (lat1, lon1, lat2, lon2) => {
     const toRad = angle => (Math.PI / 180) * angle;
     const R = 6371;
