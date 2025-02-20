@@ -10,4 +10,4 @@ const SocietySchema = new mongoose.Schema({
         flats: [Number]
     }]
 });
-module.exports = mongoose.model('Society', SocietySchema);3936
+module.exports = mongoose.model('Society', SocietySchema);

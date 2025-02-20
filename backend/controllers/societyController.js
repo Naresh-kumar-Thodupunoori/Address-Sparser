@@ -1,3 +1,4 @@
+//backend/controllers/societycontroller
 const Society = require('../models/Society');
 const { isWithinRadius } = require('../utils/geoUtils');
 
