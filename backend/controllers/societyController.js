@@ -1,4 +1,3 @@
-//backend/controllers/societycontroller
 const Society = require('../models/Society');
 const { isWithinRadius } = require('../utils/geoUtils');
 
@@ -11,74 +10,59 @@ const getSocieties = async (req, res) => {
     }
 };
 
-const escapeRegex = (text) => {
-    return text.replace(/[-\\/\\^$*+?.()|[\\]{}]/g, '\\$&');
-};
-
 const checkServiceability = async (req, res) => {
     const { latitude, longitude, address } = req.body;
-    
+
     try {
         const societies = await Society.find();
-        let within5km = false;
-        
-        // First, try to extract society name from the address
-        const addressSocietyName = address.match(/(?:Block\s+[\w]+,\s+)(.+?)(?:,|$)/i)?.[1]?.trim();
-        
-        if (!addressSocietyName) {
-            return res.json({ 
-                societyName: 'Not Serviceable', 
-                block: null, 
-                flat: null, 
-                within5km: false 
-            });
-        }
+        const normalizedAddress = address.toLowerCase();
 
-        // Find society by name and distance
-        const matchedSociety = societies.find(society => {
-            const isNearby = isWithinRadius(latitude, longitude, society.latitude, society.longitude, 5);
-            const societyNameRegex = new RegExp(escapeRegex(society.name), 'i');
-            return isNearby && societyNameRegex.test(addressSocietyName);
-        });
+        // Find society name dynamically
+        const matchedSociety = societies.find(society => 
+            normalizedAddress.includes(society.name.toLowerCase())
+        );
 
         if (!matchedSociety) {
-            return res.json({ 
-                societyName: 'Not Serviceable', 
-                block: null, 
-                flat: null, 
-                within5km: false 
+            return res.json({
+                societyName: 'Not Serviceable',
+                block: null,
+                flat: null,
+                within5km: false
             });
         }
 
-        let matchedBlock = null;
-        let allFlats = [];
-        
-        for (const block of matchedSociety.blocks) {
-            allFlats = allFlats.concat(block.flats);
-            const blockRegex = new RegExp(`\\b${escapeRegex(block.name)}\\b`, 'i');
-            if (blockRegex.test(address)) {
-                matchedBlock = block;
-                break;
-            }
+        // Check if the location is within a 5km radius
+        const isNearby = isWithinRadius(latitude, longitude, matchedSociety.latitude, matchedSociety.longitude, 5);
+
+        if (!isNearby) {
+            return res.json({
+                societyName: 'Not Serviceable',
+                block: null,
+                flat: null,
+                within5km: false
+            });
         }
-        
-        const addressNumbers = address.match(/\d+/g) || [];
-        let flatNumber = null;
-        
-        if (matchedBlock) {
-            flatNumber = addressNumbers.find(num => matchedBlock.flats.includes(parseInt(num))) || null;
-        } else {
-            flatNumber = addressNumbers.find(num => allFlats.includes(parseInt(num))) || null;
-        }
-        
+
+        // Extract block name
+        const blockMatch = address.match(/Block\s*(\d+|[A-Za-z]+)/i);
+        const blockName = blockMatch ? blockMatch[1].toLowerCase() : null;
+        const matchedBlock = matchedSociety.blocks.find(block => block.name.toLowerCase() === blockName);
+
+        // Extract flat number
+        const flatMatch = address.match(/Flat\s*(\d+)/i);
+        const flatNumber = flatMatch ? parseInt(flatMatch[1]) : null;
+        const isFlatValid = matchedBlock && matchedBlock.flats.includes(flatNumber);
+
         return res.json({
             societyName: matchedSociety.name,
             block: matchedBlock ? matchedBlock.name : null,
-            flat: flatNumber,
+            flat: isFlatValid ? flatNumber : null,
             within5km: true
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
